@@ -1,0 +1,214 @@
+
+/* Fondo general con borde amarillo y azul */
+.login-mockup-bg {
+  min-height: 100vh;
+  background: linear-gradient(120deg, #e6f0ff 0 60%, #fff 60% 100%);
+  border: 10px solid #ffe600;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.login-mockup-container {
+  display: flex;
+  background: #fff;
+  border-radius: 1.5rem;
+  box-shadow: 0 2px 24px 0 rgba(0,0,0,0.10);
+  overflow: hidden;
+  max-width: 900px;
+  width: 100%;
+  min-height: 520px;
+}
+
+.login-mockup-formside {
+  flex: 1 1 0;
+  padding: 2.5rem 2.5rem 2.5rem 2.5rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  background: #fff;
+}
+
+.login-mockup-logo {
+  font-weight: 700;
+  font-size: 1.2rem;
+  margin-bottom: 2.2rem;
+  color: #222;
+  letter-spacing: 0.5px;
+}
+
+.login-mockup-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+  width: 100%;
+  max-width: 340px;
+}
+
+.login-mockup-form h2 {
+  margin: 0 0 0.2rem 0;
+  font-size: 2rem;
+  font-weight: 700;
+  color: #222;
+}
+
+.login-mockup-sub {
+  color: #888;
+  font-size: 1.05rem;
+  margin-bottom: 0.7rem;
+}
+
+.login-google-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.7rem;
+  background: #fff;
+  border: 1.5px solid #e0e0e0;
+  border-radius: 0.5rem;
+  padding: 0.7rem 0;
+  font-size: 1.05rem;
+  font-weight: 500;
+  cursor: not-allowed;
+  margin-bottom: 0.2rem;
+  transition: border 0.2s;
+}
+.login-google-icon {
+  background: #fff;
+  color: #4285f4;
+  font-weight: bold;
+  font-size: 1.2rem;
+  border-radius: 50%;
+  border: 1.5px solid #e0e0e0;
+  width: 2rem;
+  height: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.login-mockup-or {
+  text-align: center;
+  color: #aaa;
+  font-size: 1rem;
+  margin: 0.2rem 0 0.2rem 0;
+}
+
+.login-mockup-form label {
+  display: flex;
+  flex-direction: column;
+  font-size: 1rem;
+  color: #2d3a4a;
+  gap: 0.3rem;
+}
+
+.login-mockup-form input {
+  padding: 0.7rem 1rem;
+  border: 1.5px solid #dbe2ef;
+  border-radius: 0.5rem;
+  font-size: 1rem;
+  background: #f7f9fb;
+  outline: none;
+  transition: border 0.2s;
+}
+.login-mockup-form input:focus {
+  border: 1.5px solid #3f72af;
+}
+
+.login-error {
+  color: #e94560;
+  background: #fff0f3;
+  border-radius: 0.4rem;
+  padding: 0.5rem 1rem;
+  font-size: 0.95rem;
+  text-align: center;
+}
+
+.login-mockup-submit {
+  background: #111;
+  color: #fff;
+  border: none;
+  border-radius: 0.5rem;
+  padding: 0.8rem 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 0.2rem;
+  margin-bottom: 0.2rem;
+  transition: background 0.2s;
+}
+.login-mockup-submit:disabled {
+  background: #bfc9d9;
+  cursor: not-allowed;
+}
+.login-mockup-submit:not(:disabled):hover {
+  background: #333;
+}
+
+.login-mockup-switch {
+  text-align: center;
+  font-size: 0.98rem;
+  color: #2d3a4a;
+}
+.login-link {
+  color: #3f72af;
+  cursor: pointer;
+  text-decoration: underline;
+  margin-left: 0.2rem;
+}
+
+.login-mockup-imgside {
+  flex: 1 1 0;
+  background: #f7f7fa;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2.5rem 2rem;
+  min-width: 320px;
+  max-width: 400px;
+  border-left: 2px solid #eaeaea;
+}
+.login-mockup-imgbox {
+  width: 100%;
+  max-width: 260px;
+  margin: 0 auto 1.2rem auto;
+  border-radius: 1.2rem;
+  overflow: hidden;
+  box-shadow: 0 2px 16px 0 rgba(0,0,0,0.10);
+}
+.login-mockup-imgbox img {
+  width: 100%;
+  display: block;
+}
+.login-mockup-imgtext {
+  text-align: left;
+  margin-top: 0.5rem;
+}
+.login-mockup-imgtext h3 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin: 0 0 0.3rem 0;
+  color: #222;
+}
+.login-mockup-imgtext p {
+  color: #444;
+  font-size: 1rem;
+  margin: 0;
+}
+
+@media (max-width: 900px) {
+  .login-mockup-container {
+    flex-direction: column;
+    min-height: unset;
+    max-width: 98vw;
+  }
+  .login-mockup-imgside {
+    border-left: none;
+    border-top: 2px solid #eaeaea;
+    min-width: unset;
+    max-width: unset;
+    padding: 2rem 1rem;
+  }
+}
