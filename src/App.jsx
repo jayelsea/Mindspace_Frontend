@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import Login from './Login';
 import Register from './Register';
+import Dashboard from './Dashboard';
 import './App.css';
+import './Dashboard.css';
 
 function App() {
   const [user, setUser] = useState(null);
@@ -22,10 +24,7 @@ function App() {
   }
 
   return (
-    <div>
-      <h1>Bienvenido, {user.username || 'usuario'}!</h1>
-      {/* Aquí irá el dashboard o la navegación principal */}
-    </div>
+    <Dashboard user={user} onLogout={() => setUser(null)} />
   );
 }
 

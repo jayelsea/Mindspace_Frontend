@@ -1,3 +1,10 @@
+import { useState } from 'react';
+import API_BASE_URL from './apiConfig';
+
+
+import './LoginDashboard.css';
+import logo from './assets/logo.png';
+
 export default function Login({ onLogin, onSwitchToRegister }) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -9,7 +16,7 @@ export default function Login({ onLogin, onSwitchToRegister }) {
     setLoading(true);
     setError('');
     try {
-      const response = await fetch('/api/auth/login/', {
+      const response = await fetch(`${API_BASE_URL}/auth/login/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password })
@@ -27,57 +34,53 @@ export default function Login({ onLogin, onSwitchToRegister }) {
   };
 
   return (
-    <div className="login-mockup-bg">
-      <div className="login-mockup-container">
-        <div className="login-mockup-formside">
-          <div className="login-mockup-logo">CubeFactory</div>
-          <form className="login-mockup-form" onSubmit={handleSubmit}>
-            <h2>Sign in</h2>
-            <p className="login-mockup-sub">Access your account</p>
-            <button type="button" className="login-google-btn" disabled>
-              <span className="login-google-icon">G</span> Sign in with Google
-            </button>
-            <div className="login-mockup-or">or</div>
+    <div className="login-dashboard-bg">
+      <div className="login-dashboard-container">
+        <div className="login-dashboard-formside">
+          <div className="login-dashboard-logo">MindSpace+</div>
+          <form className="login-dashboard-form" onSubmit={handleSubmit}>
+            <h2>Iniciar sesión</h2>
+            <p>Accede a tu cuenta para gestionar y analizar tu aprendizaje.</p>
             <label>
-              Username
+              Usuario
               <input
                 type="text"
                 value={username}
                 onChange={e => setUsername(e.target.value)}
                 required
                 autoFocus
-                placeholder="Username"
+                placeholder="Nombre de usuario"
               />
             </label>
             <label>
-              Password
+              Contraseña
               <input
                 type="password"
                 value={password}
                 onChange={e => setPassword(e.target.value)}
                 required
-                placeholder="Password"
+                placeholder="Contraseña"
               />
             </label>
-            {error && <div className="login-error">{error}</div>}
-            <button type="submit" className="login-mockup-submit" disabled={loading}>
-              {loading ? 'Signing in...' : 'Sign in'}
+            {error && <div className="login-dashboard-error">{error}</div>}
+            <button type="submit" className="login-dashboard-submit" disabled={loading}>
+              {loading ? 'Ingresando...' : 'Iniciar sesión'}
             </button>
-            <div className="login-mockup-switch">
-              Don't have an account?{' '}
-              <span className="login-link" onClick={onSwitchToRegister}>
-                Sign up
+            <div className="login-dashboard-switch">
+              ¿No tienes cuenta?
+              <span className="login-dashboard-link" onClick={onSwitchToRegister}>
+                Regístrate
               </span>
             </div>
           </form>
         </div>
-        <div className="login-mockup-imgside">
-          <div className="login-mockup-imgbox">
-            <img src="https://images.unsplash.com/photo-1519125323398-675f0ddb6308?auto=format&fit=facearea&w=400&q=80" alt="login visual" />
+        <div className="login-dashboard-imgside">
+          <div className="login-dashboard-imgbox">
+            <img src={logo} alt="MindSpace logo" style={{ width: '220px', borderRadius: '12px', boxShadow: '0 2px 16px rgba(108, 99, 255, 0.10)' }} />
           </div>
-          <div className="login-mockup-imgtext">
-            <h3>Welcome back!</h3>
-            <p>Sign in to continue organizing your notes and boost your learning with MindSpace+.</p>
+          <div className="login-dashboard-imgtext">
+            <h3>¡Bienvenido de nuevo!</h3>
+            <p>Inicia sesión para continuar organizando tus apuntes y potenciar tu aprendizaje con MindSpace+.</p>
           </div>
         </div>
       </div>

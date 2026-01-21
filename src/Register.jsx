@@ -1,5 +1,8 @@
+
 import { useState } from 'react';
 import './Register.css';
+import logo from './assets/logo.png';
+import API_BASE_URL from './apiConfig';
 
 export default function Register({ onRegister, onSwitchToLogin }) {
   const [username, setUsername] = useState('');
@@ -36,10 +39,10 @@ export default function Register({ onRegister, onSwitchToLogin }) {
     }
     setLoading(true);
     try {
-      const response = await fetch('/api/auth/register/', {
+      const response = await fetch(`${API_BASE_URL}/auth/register/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, email, password })
+        body: JSON.stringify({ username, email, password, password2: confirmPassword })
       });
       if (!response.ok) {
         const data = await response.json();
@@ -57,64 +60,70 @@ export default function Register({ onRegister, onSwitchToLogin }) {
     <div className="register-mockup-bg">
       <div className="register-mockup-container">
         <div className="register-mockup-formside">
-          <div className="register-mockup-logo">CubeFactory</div>
+          <div className="register-mockup-logo">MindSpace+</div>
           <form className="register-mockup-form" onSubmit={handleSubmit}>
-            <h2>Sign up now</h2>
-            <p className="register-mockup-sub">Create a free account</p>
-            <button type="button" className="register-google-btn" disabled>
-              <span className="register-google-icon">G</span> Sign up with Google
-            </button>
-            <div className="register-mockup-or">or</div>
+            <h2>Crear cuenta</h2>
+            <p className="register-mockup-sub">Regístrate gratis y accede a todas las funciones.</p>
             <label>
-              Email address
+              Usuario
+              <input
+                type="text"
+                value={username}
+                onChange={e => setUsername(e.target.value)}
+                required
+                autoFocus
+                placeholder="Nombre de usuario"
+              />
+            </label>
+            <label>
+              Correo electrónico
               <input
                 type="email"
                 value={email}
                 onChange={e => setEmail(e.target.value)}
                 required
-                autoFocus
-                placeholder="Email address"
+                placeholder="Correo electrónico"
               />
             </label>
             <label>
-              Password
+              Contraseña
               <input
                 type="password"
                 value={password}
                 onChange={e => setPassword(e.target.value)}
                 required
-                placeholder="Password"
+                placeholder="Contraseña"
               />
             </label>
             <label>
-              Repeat password
+              Repetir contraseña
               <input
                 type="password"
                 value={confirmPassword}
                 onChange={e => setConfirmPassword(e.target.value)}
                 required
-                placeholder="Repeat password"
+                placeholder="Repetir contraseña"
               />
             </label>
             {error && <div className="register-error">{error}</div>}
             <button type="submit" className="register-mockup-submit" disabled={loading}>
-              {loading ? 'Signing up...' : 'Sign up'}
+              {loading ? 'Registrando...' : 'Registrarse'}
             </button>
             <div className="register-mockup-switch">
-              Already have an account?{' '}
+              ¿Ya tienes cuenta?
               <span className="register-link" onClick={onSwitchToLogin}>
-                Sign in
+                Inicia sesión
               </span>
             </div>
           </form>
         </div>
         <div className="register-mockup-imgside">
           <div className="register-mockup-imgbox">
-            <img src="https://images.unsplash.com/photo-1519125323398-675f0ddb6308?auto=format&fit=facearea&w=400&q=80" alt="signup visual" />
+            <img src={logo} alt="MindSpace logo" />
           </div>
           <div className="register-mockup-imgtext">
-            <h3>Bring your ideas to life.</h3>
-            <p>Sign up for free and enjoy full access to all features for 30 days. No credit card required.</p>
+            <h3>Organiza tu aprendizaje.</h3>
+            <p>Regístrate y lleva el control de tus apuntes, progreso y métricas académicas con MindSpace+.</p>
           </div>
         </div>
       </div>
