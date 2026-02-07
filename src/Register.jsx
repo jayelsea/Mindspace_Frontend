@@ -48,7 +48,8 @@ export default function Register({ onRegister, onSwitchToLogin }) {
         const data = await response.json();
         throw new Error(data.detail || 'Error al registrar');
       }
-      onRegister();
+      const data = await response.json();
+      onRegister(data);
     } catch (err) {
       setError(err.message);
     } finally {
