@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import './Dashboard.css';
 import AddMateriaModal from './components/AddMateriaModal';
 import EditMateriaModal from './components/EditMateriaModal';
+import NoteForm from './components/NoteForm';
+import AddTemaModal from './components/AddTemaModal';
 
 const sectionTitles = {
   inicio: 'Dashboard',
@@ -20,10 +22,23 @@ export default function Dashboard({ user, onLogout }) {
   const [showAddMateria, setShowAddMateria] = useState(false);
   const [editMateria, setEditMateria] = useState(null);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [selectedMateria, setSelectedMateria] = useState(null);
+  const [temas, setTemas] = useState([]);
+  const [apuntes, setApuntes] = useState([]);
+  const [showAddApunteModal, setShowAddApunteModal] = useState(false);
+  const [apunteFormTema, setApunteFormTema] = useState(null);
+    const [temaParaAgregar, setTemaParaAgregar] = useState(null); // Nuevo estado para agregar
+  const [showAddTemaModal, setShowAddTemaModal] = useState(false);
+  const [apunteDesplegado, setApunteDesplegado] = useState({}); // Estado para apuntes desplegados
 
   useEffect(() => {
-    if (activeSection === 'materias') {
+    if (activeSection === 'materias' || activeSection === 'apuntes') {
       fetchMaterias();
+    }
+    if (activeSection !== 'apuntes') {
+      setSelectedMateria(null);
+      setTemas([]);
+      setApuntes([]);
     }
   }, [activeSection]);
 
@@ -41,6 +56,42 @@ export default function Dashboard({ user, onLogout }) {
       setMaterias(data);
     } catch (err) {
       setMaterias([]);
+    }
+  };
+
+  // Cargar temas de una materia
+  const fetchTemas = async (materiaId) => {
+    try {
+      const token = localStorage.getItem('access');
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/temas/?materia_id=${materiaId}`, {
+        headers: {
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        }
+      });
+      if (!res.ok) throw new Error('Error al cargar temas');
+      const data = await res.json();
+      setTemas(data);
+    } catch (err) {
+      setTemas([]);
+    }
+  };
+
+  // Cargar apuntes de un tema
+  const fetchApuntes = async (temaId) => {
+    try {
+      const token = localStorage.getItem('access');
+      // Filtrar solo apuntes activos
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/apuntes/?tema_id=${temaId}&activo=true`, {
+        headers: {
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        }
+      });
+      if (!res.ok) throw new Error('Error al cargar apuntes');
+      const data = await res.json();
+      console.log('Apuntes recibidos:', data);
+      setApuntes(data);
+    } catch (err) {
+      setApuntes([]);
     }
   };
 
@@ -99,6 +150,166 @@ export default function Dashboard({ user, onLogout }) {
     }
   };
 
+  const handleSelectMateriaApuntes = async (materia) => {
+    setSelectedMateria(materia);
+    setApuntes([]);
+    await fetchTemas(materia.id);
+    // No cargar apuntes aquí, solo al seleccionar un tema
+  };
+
+  const handleSelectTema = async (tema) => {
+    setApunteFormTema(tema);
+    await fetchApuntes(tema.id);
+  };
+
+  const handleOpenAddApunte = (tema) => {
+    setTemaParaAgregar(tema); // Guardar el tema actual para agregar
+    setApunteFormTema(null); // Limpiar edición
+    setShowAddApunteModal(true);
+  };
+
+  const handleAddApunte = async (formData) => {
+    setShowAddApunteModal(false);
+    try {
+      const token = localStorage.getItem('access');
+      // Usar temaParaAgregar como temaId
+      const temaId = temaParaAgregar ? temaParaAgregar.id : (formData.tema || (temas[0] && temas[0].id) || null);
+      if (!temaId) throw new Error('No se ha seleccionado un tema para el apunte.');
+      const payload = {
+        titulo: formData.title,
+        contenido: formData.content,
+        tema: temaId,
+        etiquetas: formData.etiquetas || '',
+        prioridad: formData.prioridad || 'media',
+        activo: true
+      };
+      console.log('Payload apunte (add):', payload);
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/apuntes/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify(payload)
+      });
+      if (!res.ok) {
+        const errorText = await res.text();
+        console.error('Error al agregar apunte:', errorText);
+        throw new Error('Error al agregar apunte');
+      }
+      // Obtener el apunte recién creado
+      const nuevoApunte = await res.json();
+      console.log('Respuesta apunte (add):', nuevoApunte);
+      await fetchApuntes(temaId);
+      // Desplegar automáticamente el apunte recién creado
+      setApunteDesplegado(prev => ({ ...prev, [nuevoApunte.id]: true }));
+      setTemaParaAgregar(null); // Limpiar estado
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
+  const handleEditApunte = (apunte) => {
+    setApunteFormTema(apunte);
+    setShowAddApunteModal(true);
+  };
+
+  const handleUpdateApunte = async (formData) => {
+    setShowAddApunteModal(false);
+    try {
+      const token = localStorage.getItem('access');
+      // Obtener el id del tema asociado al apunte
+      const temaId = formData.tema || apunteFormTema.tema || apunteFormTema.id;
+      const payload = {
+        titulo: formData.title,
+        contenido: formData.content,
+        tema: temaId,
+        etiquetas: formData.etiquetas || '',
+        prioridad: formData.prioridad || 'media',
+        activo: true
+      };
+      console.log('Payload apunte (update):', payload);
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/apuntes/${apunteFormTema.id}/`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify(payload)
+      });
+      if (!res.ok) {
+        const errorText = await res.text();
+        console.error('Error al editar apunte:', errorText);
+        throw new Error('Error al editar apunte');
+      }
+      const updatedApunte = await res.json();
+      console.log('Respuesta apunte (update):', updatedApunte);
+      await fetchApuntes(temaId);
+      setApunteFormTema(null);
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
+  const handleDeleteApunte = async (id) => {
+    if (!window.confirm('¿Eliminar este apunte?')) return;
+    try {
+      const token = localStorage.getItem('access');
+      console.log('Intentando eliminar apunte id:', id);
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/apuntes/${id}/`, {
+        method: 'DELETE',
+        headers: {
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        }
+      });
+      console.log('Respuesta DELETE apunte:', res.status, res.statusText);
+      if (!res.ok) {
+        const errorText = await res.text();
+        console.error('Error al eliminar apunte:', errorText);
+        throw new Error('Error al eliminar apunte');
+      }
+      // Limpiar estado de apuntes y apunteDesplegado
+      setApuntes([]);
+      setApunteDesplegado({});
+      // Recargar apuntes del tema actual
+      const temaId = apunteFormTema && apunteFormTema.id ? apunteFormTema.id : (temaParaAgregar && temaParaAgregar.id ? temaParaAgregar.id : null);
+      if (temaId) {
+        await fetchApuntes(temaId);
+      }
+    } catch (err) {
+      alert(err.message);
+      console.error('Catch eliminar apunte:', err);
+    }
+  };
+
+  const handleAddTema = async (data) => {
+    setShowAddTemaModal(false);
+    try {
+      const token = localStorage.getItem('access');
+      // Calcular el siguiente orden disponible para la materia
+      const ordenDisponible = temas.length > 0
+        ? Math.max(...temas.map(t => t.orden || 0)) + 1
+        : 1;
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/temas/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify({
+          titulo: data.nombre, // corregido
+          descripcion: data.descripcion,
+          materia: selectedMateria.id,
+          orden: ordenDisponible
+        })
+      });
+      if (!res.ok) throw new Error('Error al agregar tema');
+      await fetchTemas(selectedMateria.id);
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
   const renderContent = () => {
     switch (activeSection) {
       case 'inicio':
@@ -147,6 +358,108 @@ export default function Dashboard({ user, onLogout }) {
             </div>
             <AddMateriaModal open={showAddMateria} onClose={() => setShowAddMateria(false)} onSubmit={handleAddMateria} />
             <EditMateriaModal open={showEditModal} onClose={()=>setShowEditModal(false)} onSubmit={handleEditMateria} materia={editMateria} />
+          </div>
+        );
+      case 'apuntes':
+        return (
+          <div className="dashboard-content-section">
+            <h1>Apuntes</h1>
+            <p>Selecciona una materia para ver sus temas y apuntes.</p>
+            <div className="dashboard-cards">
+              {materias.length === 0 && <div className="dashboard-card">No hay materias registradas.</div>}
+              {materias.map(m => (
+                <div key={m.id} className={`dashboard-card${selectedMateria && selectedMateria.id === m.id ? ' selected' : ''}`}
+                  style={{cursor:'pointer'}}
+                  onClick={() => handleSelectMateriaApuntes(m)}>
+                  <strong>{m.nombre}</strong> {m.codigo && <span style={{color:'#888'}}>({m.codigo})</span>}<br/>
+                  <span style={{fontSize:'0.95rem',color:'#666'}}>{m.descripcion}</span><br/>
+                  <span style={{fontSize:'0.95rem',color:'#666'}}>Profesor: {m.profesor || '-'} | Créditos: {m.creditos} | Semestre: {m.semestre || '-'}</span>
+                </div>
+              ))}
+            </div>
+            {selectedMateria && (
+              <div style={{marginTop:'1.5rem'}}>
+                <h3 style={{marginBottom:'0.7rem'}}>Temas de {selectedMateria.nombre}</h3>
+                <div style={{display:'flex',gap:'1rem',flexWrap:'wrap'}}>
+                  {temas.length === 0 ? (
+                    <div style={{color:'#b00'}}>No hay temas registrados para esta materia.</div>
+                  ) : (
+                    temas.map(t => (
+                      <button key={t.id} style={{background:'#e0eaff',border:'none',borderRadius:'4px',padding:'0.5rem 1.2rem',fontWeight:'bold',cursor:'pointer'}} onClick={()=>handleSelectTema(t)}>
+                        {t.titulo || t.nombre}
+                      </button>
+                    ))
+                  )}
+                  <button style={{background:'#e0eaff',border:'none',borderRadius:'4px',padding:'0.4rem 1rem',fontSize:'0.95rem',fontWeight:'bold',cursor:'pointer'}} onClick={()=>setShowAddTemaModal(true)}>+ Tema</button>
+                </div>
+              </div>
+            )}
+            {apunteFormTema && (
+              <div style={{marginTop:'2rem'}}>
+                <h2>Apuntes de {apunteFormTema.titulo || apunteFormTema.nombre}</h2>
+                <button style={{marginBottom:'1.5rem',background:'#e0ffe0',border:'none',borderRadius:'4px',padding:'0.6rem 1.5rem',fontWeight:'bold',cursor:'pointer'}} onClick={()=>handleOpenAddApunte(apunteFormTema)}>Agregar Apunte</button>
+                {apuntes.length === 0 && <div>No hay apuntes registrados para este tema.</div>}
+                <div style={{display:'flex',flexWrap:'wrap',gap:'1.5rem'}}>
+                  {apuntes.map(a => {
+                    // Mensaje de depuración para cada apunte
+                    let errorMsg = '';
+                    if (!('contenido' in a)) {
+                      errorMsg = '⚠️ El campo "contenido" no existe en el objeto apunte:' + JSON.stringify(a);
+                    } else if (a.contenido === undefined) {
+                      errorMsg = '⚠️ El campo "contenido" está undefined para el apunte con id ' + a.id;
+                    } else if (a.contenido === null) {
+                      errorMsg = '⚠️ El campo "contenido" está null para el apunte con id ' + a.id;
+                    }
+                    return (
+                      <div key={a.id} style={{border:'1px solid #ddd',borderRadius:'8px',padding:'1rem',minWidth:'260px',background:'#fafaff',position:'relative'}}>
+                        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+                          <div style={{fontWeight:'bold',fontSize:'1.1rem'}}>{a.titulo}</div>
+                          <button
+                            style={{background:'none',border:'none',cursor:'pointer',fontSize:'1.2rem',padding:'0.2rem'}}
+                            onClick={()=>setApunteDesplegado(prev=>({...prev,[a.id]:!prev[a.id]}))}
+                            aria-label={apunteDesplegado[a.id] ? 'Ocultar detalles' : 'Mostrar detalles'}
+                          >
+                            {apunteDesplegado[a.id] ? '▲' : '▼'}
+                          </button>
+                        </div>
+                        {errorMsg && (
+                          <div style={{color:'red',fontSize:'0.9rem',margin:'0.5rem 0'}}>{errorMsg}</div>
+                        )}
+                        {apunteDesplegado[a.id] && (
+                          <div>
+                            <div style={{fontSize:'0.95rem',color:'#333',marginBottom:'0.5rem',background:'#f5f5f5',padding:'0.5rem',borderRadius:'4px'}}>
+                              {/* Mostrar el contenido y depurar si está vacío */}
+                              {typeof a.contenido === 'string' && a.contenido.trim() !== '' ? a.contenido : '[Sin contenido]'}
+                            </div>
+                          </div>
+                        )}
+                        <div style={{marginTop:'0.7rem',display:'flex',gap:'0.7rem'}}>
+                          <button style={{background:'#e0e0ff',border:'none',borderRadius:'4px',padding:'0.3rem 1rem',cursor:'pointer'}} onClick={()=>handleEditApunte(a)}>Editar</button>
+                          <button style={{background:'#ffdddd',border:'none',borderRadius:'4px',padding:'0.3rem 1rem',cursor:'pointer'}} onClick={()=>handleDeleteApunte(a.id)}>Borrar</button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+            {showAddApunteModal && (
+              <div className="modal-overlay">
+                <div className="modal-content">
+                  <h2>{apunteFormTema && apunteFormTema.id ? 'Editar Apunte' : `Agregar Apunte a "${temaParaAgregar ? (temaParaAgregar.titulo || temaParaAgregar.nombre) : selectedMateria?.nombre}"`}</h2>
+                  <NoteForm 
+                    onSubmit={apunteFormTema && apunteFormTema.id ? handleUpdateApunte : handleAddApunte}
+                    initialData={apunteFormTema && apunteFormTema.id ? apunteFormTema : (temaParaAgregar ? { tema: temaParaAgregar.id } : {})}
+                    onCancel={()=>{setShowAddApunteModal(false);setApunteFormTema(null);setTemaParaAgregar(null);}}
+                    temas={temas}
+                    allowTemaSelect={!apunteFormTema || !apunteFormTema.id}
+                  />
+                </div>
+              </div>
+            )}
+            {showAddTemaModal && (
+              <AddTemaModal open={showAddTemaModal} onClose={()=>setShowAddTemaModal(false)} onSubmit={handleAddTema} materia={selectedMateria.id} />
+            )}
           </div>
         );
       case 'mapa':
