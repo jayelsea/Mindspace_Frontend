@@ -1,5 +1,6 @@
 // ...existing code...
 import { useState, useEffect } from 'react';
+
 import MindMapView from './components/MindMapView';
 import './Dashboard.css';
 import AddMateriaModal from './components/AddMateriaModal';
@@ -7,6 +8,26 @@ import EditMateriaModal from './components/EditMateriaModal';
 import NoteForm from './components/NoteForm';
 import AddTemaModal from './components/AddTemaModal';
 import ResumenSection from './components/ResumenSection';
+import FichasSection from './components/FichasSection';
+  // Función para obtener fichas de estudio (quiz cards) por tema desde el backend
+  // fetchFichasIA: genera 5 fichas de estudio usando el endpoint POST /api/temas/{id}/fichas/
+  const fetchFichasIA = async (tema) => {
+    try {
+      const token = localStorage.getItem('access');
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/temas/${tema.id}/fichas/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        }
+      });
+      if (!res.ok) throw new Error('Error al generar fichas');
+      const data = await res.json();
+      return data.fichas || [];
+    } catch (err) {
+      return [];
+    }
+  };
 
 const sectionTitles = {
   inicio: 'Dashboard',
@@ -570,6 +591,15 @@ export default function Dashboard({ user, onLogout }) {
               </div>
             )}
           </div>
+        );
+
+      case 'fichas':
+        return (
+          <FichasSection
+            materias={materias}
+            temas={temas}
+            fetchFichasIA={fetchFichasIA}
+          />
         );
       case 'progreso':
         return (
