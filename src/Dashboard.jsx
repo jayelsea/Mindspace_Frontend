@@ -1,9 +1,12 @@
+// ...existing code...
 import { useState, useEffect } from 'react';
+import MindMapView from './components/MindMapView';
 import './Dashboard.css';
 import AddMateriaModal from './components/AddMateriaModal';
 import EditMateriaModal from './components/EditMateriaModal';
 import NoteForm from './components/NoteForm';
 import AddTemaModal from './components/AddTemaModal';
+import ResumenSection from './components/ResumenSection';
 
 const sectionTitles = {
   inicio: 'Dashboard',
@@ -16,8 +19,14 @@ const sectionTitles = {
   apoyo: 'Funciones de Apoyo',
 };
 
+
 export default function Dashboard({ user, onLogout }) {
   const [activeSection, setActiveSection] = useState('inicio');
+  // Estado para mapa mental
+  const [showMindMapModal, setShowMindMapModal] = useState(false);
+  const [mindMapData, setMindMapData] = useState(null);
+  const [mindMapLoading, setMindMapLoading] = useState(false);
+  const [mindMapError, setMindMapError] = useState(null);
   const [materias, setMaterias] = useState([]);
   const [showAddMateria, setShowAddMateria] = useState(false);
   const [editMateria, setEditMateria] = useState(null);
@@ -27,20 +36,58 @@ export default function Dashboard({ user, onLogout }) {
   const [apuntes, setApuntes] = useState([]);
   const [showAddApunteModal, setShowAddApunteModal] = useState(false);
   const [apunteFormTema, setApunteFormTema] = useState(null);
-    const [temaParaAgregar, setTemaParaAgregar] = useState(null); // Nuevo estado para agregar
+  const [temaParaAgregar, setTemaParaAgregar] = useState(null); // Nuevo estado para agregar
   const [showAddTemaModal, setShowAddTemaModal] = useState(false);
   const [apunteDesplegado, setApunteDesplegado] = useState({}); // Estado para apuntes desplegados
 
   useEffect(() => {
-    if (activeSection === 'materias' || activeSection === 'apuntes') {
-      fetchMaterias();
-    }
-    if (activeSection !== 'apuntes') {
-      setSelectedMateria(null);
-      setTemas([]);
+    const fetchMateriasYTemas = async () => {
+      if (activeSection === 'materias' || activeSection === 'apuntes' || activeSection === 'mapa') {
+        await fetchMaterias();
+        if (activeSection === 'mapa') {
+          // Traer temas de todas las materias
+          try {
+            const token = localStorage.getItem('access');
+            const res = await fetch(`${import.meta.env.VITE_API_URL}/temas/?activo=true`, {
+              headers: {
+                ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+              }
+            });
+            if (!res.ok) throw new Error('Error al cargar temas');
+            const data = await res.json();
+            setTemas(data);
+          } catch (err) {
+            setTemas([]);
+          }
+        }
+      }
+      if (activeSection === 'resumen') {
+        fetchAllApuntes();
+      }
+      if (activeSection !== 'apuntes') {
+        setSelectedMateria(null);
+        setApuntes([]);
+      }
+    };
+    fetchMateriasYTemas();
+  }, [activeSection]);
+
+  // Cargar todos los apuntes del usuario
+  const fetchAllApuntes = async () => {
+    try {
+      const token = localStorage.getItem('access');
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/apuntes/?activo=true`, {
+        headers: {
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        }
+      });
+      if (!res.ok) throw new Error('Error al cargar apuntes');
+      const data = await res.json();
+      setApuntes(data);
+    } catch (err) {
       setApuntes([]);
     }
-  }, [activeSection]);
+  };
 
   const fetchMaterias = async () => {
     try {
@@ -310,6 +357,32 @@ export default function Dashboard({ user, onLogout }) {
     }
   };
 
+  // Generar mapa conceptual de un tema (real)
+  const handleGenerarMapaConceptual = async (tema) => {
+    setShowMindMapModal(true);
+    setMindMapData(null);
+    setMindMapError(null);
+    setMindMapLoading(true);
+    try {
+      const token = localStorage.getItem('access');
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/temas/${tema.id}/mapa-mental/`, {
+        headers: {
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        }
+      });
+      if (!res.ok) {
+        const errorText = await res.text();
+        throw new Error(errorText || 'Error al generar el mapa mental');
+      }
+      const data = await res.json();
+      setMindMapData(data.mapa_mental || data);
+    } catch (err) {
+      setMindMapError(err.message || 'Error desconocido');
+    } finally {
+      setMindMapLoading(false);
+    }
+  };
+
   const renderContent = () => {
     switch (activeSection) {
       case 'inicio':
@@ -400,46 +473,31 @@ export default function Dashboard({ user, onLogout }) {
                 <button style={{marginBottom:'1.5rem',background:'#e0ffe0',border:'none',borderRadius:'4px',padding:'0.6rem 1.5rem',fontWeight:'bold',cursor:'pointer'}} onClick={()=>handleOpenAddApunte(apunteFormTema)}>Agregar Apunte</button>
                 {apuntes.length === 0 && <div>No hay apuntes registrados para este tema.</div>}
                 <div style={{display:'flex',flexWrap:'wrap',gap:'1.5rem'}}>
-                  {apuntes.map(a => {
-                    // Mensaje de depuración para cada apunte
-                    let errorMsg = '';
-                    if (!('contenido' in a)) {
-                      errorMsg = '⚠️ El campo "contenido" no existe en el objeto apunte:' + JSON.stringify(a);
-                    } else if (a.contenido === undefined) {
-                      errorMsg = '⚠️ El campo "contenido" está undefined para el apunte con id ' + a.id;
-                    } else if (a.contenido === null) {
-                      errorMsg = '⚠️ El campo "contenido" está null para el apunte con id ' + a.id;
-                    }
-                    return (
-                      <div key={a.id} style={{border:'1px solid #ddd',borderRadius:'8px',padding:'1rem',minWidth:'260px',background:'#fafaff',position:'relative'}}>
-                        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
-                          <div style={{fontWeight:'bold',fontSize:'1.1rem'}}>{a.titulo}</div>
-                          <button
-                            style={{background:'none',border:'none',cursor:'pointer',fontSize:'1.2rem',padding:'0.2rem'}}
-                            onClick={()=>setApunteDesplegado(prev=>({...prev,[a.id]:!prev[a.id]}))}
-                            aria-label={apunteDesplegado[a.id] ? 'Ocultar detalles' : 'Mostrar detalles'}
-                          >
-                            {apunteDesplegado[a.id] ? '▲' : '▼'}
-                          </button>
-                        </div>
-                        {errorMsg && (
-                          <div style={{color:'red',fontSize:'0.9rem',margin:'0.5rem 0'}}>{errorMsg}</div>
-                        )}
-                        {apunteDesplegado[a.id] && (
-                          <div>
-                            <div style={{fontSize:'0.95rem',color:'#333',marginBottom:'0.5rem',background:'#f5f5f5',padding:'0.5rem',borderRadius:'4px'}}>
-                              {/* Mostrar el contenido y depurar si está vacío */}
-                              {typeof a.contenido === 'string' && a.contenido.trim() !== '' ? a.contenido : '[Sin contenido]'}
-                            </div>
-                          </div>
-                        )}
-                        <div style={{marginTop:'0.7rem',display:'flex',gap:'0.7rem'}}>
-                          <button style={{background:'#e0e0ff',border:'none',borderRadius:'4px',padding:'0.3rem 1rem',cursor:'pointer'}} onClick={()=>handleEditApunte(a)}>Editar</button>
-                          <button style={{background:'#ffdddd',border:'none',borderRadius:'4px',padding:'0.3rem 1rem',cursor:'pointer'}} onClick={()=>handleDeleteApunte(a.id)}>Borrar</button>
-                        </div>
+                  {apuntes.map(a => (
+                    <div key={a.id} style={{border:'1px solid #ddd',borderRadius:'8px',padding:'1rem',minWidth:'260px',background:'#fafaff',position:'relative'}}>
+                      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+                        <div style={{fontWeight:'bold',fontSize:'1.1rem'}}>{a.titulo}</div>
+                        <button
+                          style={{background:'none',border:'none',cursor:'pointer',fontSize:'1.2rem',padding:'0.2rem'}}
+                          onClick={()=>setApunteDesplegado(prev=>({...prev,[a.id]:!prev[a.id]}))}
+                          aria-label={apunteDesplegado[a.id] ? 'Ocultar detalles' : 'Mostrar detalles'}
+                        >
+                          {apunteDesplegado[a.id] ? '▲' : '▼'}
+                        </button>
                       </div>
-                    );
-                  })}
+                      {apunteDesplegado[a.id] && (
+                        <div>
+                          <div style={{fontSize:'0.95rem',color:'#333',marginBottom:'0.5rem',background:'#f5f5f5',padding:'0.5rem',borderRadius:'4px'}}>
+                            {typeof a.contenido === 'string' && a.contenido.trim() !== '' ? a.contenido : '[Sin contenido]'}
+                          </div>
+                        </div>
+                      )}
+                      <div style={{marginTop:'0.7rem',display:'flex',gap:'0.7rem'}}>
+                        <button style={{background:'#e0e0ff',border:'none',borderRadius:'4px',padding:'0.3rem 1rem',cursor:'pointer'}} onClick={()=>handleEditApunte(a)}>Editar</button>
+                        <button style={{background:'#ffdddd',border:'none',borderRadius:'4px',padding:'0.3rem 1rem',cursor:'pointer'}} onClick={()=>handleDeleteApunte(a.id)}>Borrar</button>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
             )}
@@ -462,11 +520,55 @@ export default function Dashboard({ user, onLogout }) {
             )}
           </div>
         );
+      case 'resumen':
+        return <ResumenSection apuntes={apuntes} tema={apunteFormTema} />;
       case 'mapa':
         return (
           <div className="dashboard-content-section">
             <h1>Generar Mapa Mental</h1>
             <p>Visualiza tus conceptos en mapas mentales</p>
+            <div style={{marginTop:'2rem'}}>
+              {materias.length === 0 ? (
+                <div>No hay materias registradas.</div>
+              ) : (
+                materias.map(m => (
+                  <div key={m.id} style={{marginBottom:'2.5rem'}}>
+                    <h3 style={{color:'#3B82F6',marginBottom:'0.7rem'}}>{m.nombre}</h3>
+                    {temas.filter(t => t.materia === m.id).length === 0 ? (
+                      <div style={{color:'#b00',marginLeft:'1.5rem'}}>No hay temas para esta materia.</div>
+                    ) : (
+                      <div style={{display:'flex',flexWrap:'wrap',gap:'1.5rem',marginLeft:'1.5rem'}}>
+                        {temas.filter(t => t.materia === m.id).map(t => (
+                          <div key={t.id} style={{border:'1px solid #ddd',borderRadius:'8px',padding:'1.2rem',minWidth:'240px',background:'#fafaff',boxShadow:'0 2px 8px #0001',display:'flex',flexDirection:'column',alignItems:'flex-start'}}>
+                            <div style={{fontWeight:'bold',fontSize:'1.1rem',marginBottom:'0.5rem'}}>{t.titulo || t.nombre}</div>
+                            <div style={{fontSize:'0.95rem',color:'#333',marginBottom:'0.7rem',background:'#f5f5f5',padding:'0.5rem',borderRadius:'4px',maxHeight:'80px',overflow:'auto'}}>
+                              {typeof t.descripcion === 'string' && t.descripcion.trim() !== '' ? t.descripcion : '[Sin descripción]'}
+                            </div>
+                            <button style={{background:'#e0eaff',border:'none',borderRadius:'4px',padding:'0.5rem 1.2rem',fontWeight:'bold',cursor:'pointer'}} onClick={()=>handleGenerarMapaConceptual(t)}>
+                              Generar Mapa Conceptual
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))
+              )}
+            </div>
+            {/* Modal para mostrar el mapa mental */}
+            {showMindMapModal && (
+              <div className="modal-overlay" style={{zIndex:1000,display:'flex',alignItems:'center',justifyContent:'center'}}>
+                <div className="modal-content" style={{maxWidth:'900px',width:'90vw',maxHeight:'80vh',padding:'2rem',position:'relative',overflow:'hidden',background:'#fff',borderRadius:'16px',boxShadow:'0 4px 32px #0002'}}>
+                  <button onClick={()=>setShowMindMapModal(false)} style={{position:'absolute',top:'1rem',right:'1rem',background:'#eee',border:'none',borderRadius:'50%',width:'2rem',height:'2rem',fontWeight:'bold',cursor:'pointer'}}>✕</button>
+                  <h2 style={{marginBottom:'1.5rem',textAlign:'center'}}>Mapa Mental Generado</h2>
+                  <div style={{overflowY:'auto',maxHeight:'65vh',paddingRight:'0.5rem'}}>
+                    {mindMapLoading && <div>Cargando mapa mental...</div>}
+                    {mindMapError && <div style={{color:'#b00'}}>Error: {mindMapError}</div>}
+                    {mindMapData && <MindMapView data={mindMapData} />}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         );
       case 'progreso':
@@ -492,8 +594,8 @@ export default function Dashboard({ user, onLogout }) {
     <div className="dashboard-container">
       <aside className="dashboard-sidebar">
         <div className="dashboard-sidebar-header">
-          <h2>MindSpace+</h2>
-          <p className="dashboard-user-name">{user?.username || 'Usuario'}</p>
+          <h2 style={{marginBottom:'0.7rem'}}>MindSpace+</h2>
+          <img src="/mindspace-logo.svg" alt="MindSpace Logo" style={{width:'80px',height:'80px',margin:'0.5rem auto 1.2rem',display:'block',objectFit:'contain'}} />
         </div>
         <nav className="dashboard-nav">
           <button
@@ -565,6 +667,4 @@ export default function Dashboard({ user, onLogout }) {
       </main>
     </div>
   );
-  
-  // Funcionalidad de materias eliminada para restaurar versión simple
 }
